@@ -86,6 +86,10 @@ while test $# -gt 0; do
       shift
       ;;
     -v)
+      LOGGING="--no-capture --no-capture-stderr --format=plain"
+      shift
+      ;;
+    -vv)
       LOGGING="--no-logcapture --no-capture --no-capture-stderr --format=plain"
       shift
       ;;

@@ -106,6 +106,34 @@ class BackupClusterTest(unittest.TestCase):
                         1, 2, self.mock_orchestration, self.mock_orchestration, self.mock_cassandra_config,
                         self.mock_monitoring, self.mock_storage)
 
+    def test_backup_orchestration_already_exists(self):
+        self.mock_orchestration.pssh_run.return_value = True
+        medusa_conf = self._build_medusa_config(self.config)
+        with self.assertRaises(SystemExit):
+            orchestrate(medusa_conf, "backup2", "127.0.0.1", None, True, "differential", pathlib.Path("/tmp"),
+                        1, 2, self.mock_orchestration, self.mock_orchestration, self.mock_cassandra_config,
+                        self.mock_monitoring, self.mock_storage)
+
+    def test_backup_orchestration_pssh_snapshot_failure(self):
+        self.mock_orchestration.pssh_run.return_value = False
+        self.mock_storage.get_cluster_backup.return_value = None
+        medusa_conf = self._build_medusa_config(self.config)
+        with self.assertRaises(SystemExit):
+            orchestrate(medusa_conf, "backup2", "127.0.0.1", None, True, "differential", pathlib.Path("/tmp"),
+                        1, 2, self.mock_orchestration, self.mock_orchestration, self.mock_cassandra_config,
+                        self.mock_monitoring, self.mock_storage)
+
+    def test_backup_orchestration_pssh_backup_failure(self):
+        mock_backup = create_autospec(Orchestration)
+        mock_backup.pssh_run.return_value = False
+        self.mock_orchestration.pssh_run.return_value = True
+        self.mock_storage.get_cluster_backup.return_value = None
+        medusa_conf = self._build_medusa_config(self.config)
+        with self.assertRaises(SystemExit):
+            orchestrate(medusa_conf, "backup2", "127.0.0.1", None, True, "differential", pathlib.Path("/tmp"),
+                        1, 2, self.mock_orchestration, self.mock_orchestration, mock_backup,
+                        self.mock_monitoring, self.mock_storage)
+
 
 if __name__ == '__main__':
     unittest.main()

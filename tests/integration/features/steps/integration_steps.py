@@ -47,6 +47,7 @@ import medusa.status
 import medusa.verify
 import medusa.verify_restore
 import medusa.service.grpc.client
+import medusa.service.grpc.server
 
 from medusa.config import (
     MedusaConfig,
@@ -129,36 +130,22 @@ def tune_ccm_settings(cluster_name):
 
 
 class GRPCServer:
-    @staticmethod
-    def init(config):
-        server = GRPCServer(config)
-        server.start()
-        return server
+    def __init__(self, config):
+        if not os.path.isdir(os.path.join("/tmp", "medusa_grpc")):
+            os.makedirs(os.path.join("/tmp", "medusa_grpc"))
 
-    @staticmethod
-    def destroy():
-        p = subprocess.Popen(["ps", "-Af"], stdout=subprocess.PIPE)
-        out, err = p.communicate()
-        for line in out.splitlines():
-            if b"medusa.service.grpc.server server.py" in line:
-                logging.info(line)
-                pid = int(line.split(None, 2)[1])
-                os.kill(pid, signal.SIGKILL)
+        self.config = config
+        medusa_conf_file = "/tmp/medusa_grpc/medusa.ini"
+        with open(medusa_conf_file, "w") as config_file:
+            self.config.write(config_file)
 
+        self.grpc_server = medusa.service.grpc.server.Server(medusa_conf_file, testing=True)
+        self.grpc_server.serve()
+
+    def destroy(self):
+        self.grpc_server.shutdown(None, None)
         if os.path.isdir(os.path.join("/tmp", "medusa_grpc")):
             shutil.rmtree(os.path.join("/tmp", "medusa_grpc"))
-
-    def __init__(self, config):
-        self.config = config
-        self.medusa_conf_file = "/tmp/medusa_grpc/medusa.ini"
-
-    def start(self):
-        os.makedirs(os.path.join("/tmp", "medusa_grpc"))
-
-        with open(self.medusa_conf_file, "w") as config_file:
-            self.config.write(config_file)
-            cmd = ["python3", "-m", "medusa.service.grpc.server", "server.py", self.medusa_conf_file]
-            subprocess.Popen(cmd, cwd=os.path.abspath("../"))
 
 
 class MgmtApiServer:
@@ -346,9 +333,7 @@ def i_am_using_storage_provider_with_grpc_server(context, storage_provider, clie
     config = parse_medusa_config(context, storage_provider, client_encryption,
                                  "http://127.0.0.1:8778/jolokia/", grpc=1, use_mgmt_api=1)
 
-    GRPCServer.destroy()
-    context.grpc_server = GRPCServer.init(config)
-
+    context.grpc_server = GRPCServer(config)
     context.grpc_client = medusa.service.grpc.client.Client(
         "127.0.0.1:50051",
         channel_options=[('grpc.enable_retries', 0)]
@@ -377,8 +362,7 @@ def i_am_using_storage_provider_with_grpc_server_and_mgmt_api(context, storage_p
     config = parse_medusa_config(context, storage_provider, client_encryption,
                                  "http://127.0.0.1:8080/api/v0/ops/node/snapshots", use_mgmt_api=1, grpc=1)
 
-    GRPCServer.destroy()
-    context.grpc_server = GRPCServer.init(config)
+    context.grpc_server = GRPCServer(config)
 
     context.grpc_client = medusa.service.grpc.client.Client(
         "127.0.0.1:50051",

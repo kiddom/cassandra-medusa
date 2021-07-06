@@ -15,9 +15,11 @@
 
 import cassandra
 import datetime
+import glob
 import json
 import logging
 import os
+import random
 import requests
 import shutil
 import subprocess
@@ -39,6 +41,7 @@ import medusa.config
 import medusa.download
 import medusa.index
 import medusa.filtering
+import medusa.fetch_tokenmap
 import medusa.listing
 import medusa.purge
 import medusa.report_latest
@@ -1132,14 +1135,10 @@ def _i_can_verify_the_restore_verify_query_returned_rows(context, query, expecte
     medusa.verify_restore.verify_restore(["127.0.0.1"], custom_config)
 
 
-@when(r'I delete the manifest from the backup named "{backup_name}"')
+@then(r'I delete the manifest from the backup named "{backup_name}"')
 def _i_delete_the_manifest_from_the_backup_named(context, backup_name):
     storage = Storage(config=context.medusa_config.storage)
     path_root = BUCKET_ROOT
-
-    dir_path = os.path.join(path_root, storage.prefix_path + "index", "backup_index", backup_name)
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
 
     fqdn = "127.0.0.1"
     path_manifest_index_latest = "{}/{}index/backup_index/{}/manifest_{}.json".format(
@@ -1169,10 +1168,42 @@ def _the_backup_named_is_incomplete(context, backup_name):
             assert not backup.finished
 
 
+@then(u'I delete a random sstable from backup "{backup_name}" in the "{table}" table in keyspace "{keyspace}"')
+def _i_delete_a_random_sstable(context, backup_name, table, keyspace):
+    storage = Storage(config=context.medusa_config.storage)
+    path_root = BUCKET_ROOT
+
+    fqdn = "127.0.0.1"
+    path_sstables = "{}/{}{}/{}/data/{}/{}*".format(
+        path_root, storage.prefix_path, fqdn, backup_name, keyspace, table
+    )
+
+    table_path = glob.glob(path_sstables)[0]
+    sstable_files = os.listdir(table_path)
+    random.shuffle(sstable_files)
+    os.remove(os.path.join(table_path, sstable_files[0]))
+
+
+@then(r'verifying backup "{backup_name}" fails')
+def _verifying_backup_fails(context, backup_name):
+    try:
+        medusa.verify.verify(context.medusa_config, backup_name, True)
+        assert "Verify should have failed" == "Well it didn't"
+    except RuntimeError:
+        # All good, we should get this exception
+        pass
+
+
 @when(r'I delete the backup named "{backup_name}"')
 def _i_delete_the_backup_named(context, backup_name, all_nodes=False):
     medusa.purge.delete_backup(context.medusa_config,
                                backup_name=backup_name, all_nodes=all_nodes)
+
+
+@then(r'I can fetch the tokenmap of the backup named "{backup_name}"')
+def _i_can_fecth_tokenmap_of_backup_named(context, backup_name):
+    tokenmap = medusa.fetch_tokenmap.main(backup_name=backup_name, config=context.medusa_config)
+    assert "127.0.0.1" in tokenmap
 
 
 def connect_cassandra(is_client_encryption_enable, tls_version=PROTOCOL_TLS):

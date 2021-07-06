@@ -728,8 +728,10 @@ def _i_can_download_the_backup_all_tables_successfully(context, backup_name):
         fqdn=config.storage.fqdn,
         name=backup_name,
     )
-    fqtn = set({})
-    medusa.download.download_data(context.medusa_config.storage, backup, fqtn, Path(download_path))
+    keyspaces = set()
+    tables = set()
+    medusa.download.download_cmd(context.medusa_config, backup_name, Path(download_path), keyspaces, tables, False)
+
     # check all manifest objects that have been backed up have been downloaded
     keyspaces = {section['keyspace'] for section in json.loads(backup.manifest) if section['objects']}
     for ks in keyspaces:
@@ -1128,6 +1130,43 @@ def _i_can_verify_the_restore_verify_query_returned_rows(context, query, expecte
         kubernetes=None,
     )
     medusa.verify_restore.verify_restore(["127.0.0.1"], custom_config)
+
+
+@when(r'I delete the manifest from the backup named "{backup_name}"')
+def _i_delete_the_manifest_from_the_backup_named(context, backup_name):
+    storage = Storage(config=context.medusa_config.storage)
+    path_root = BUCKET_ROOT
+
+    dir_path = os.path.join(path_root, storage.prefix_path + "index", "backup_index", backup_name)
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+
+    fqdn = "127.0.0.1"
+    path_manifest_index_latest = "{}/{}index/backup_index/{}/manifest_{}.json".format(
+        path_root, storage.prefix_path, backup_name, fqdn
+    )
+    path_backup_index = "{}/{}index/backup_index/{}".format(
+        path_root, storage.prefix_path, backup_name
+    )
+    path_manifest_backup = "{}/{}{}/{}/meta/manifest.json".format(
+        path_root, storage.prefix_path, fqdn, backup_name, fqdn
+    )
+
+    os.remove(path_manifest_backup)
+    os.remove(path_manifest_index_latest)
+
+    meta_files = os.listdir(path_backup_index)
+    for meta_file in meta_files:
+        if meta_file.startswith("finished"):
+            os.remove(os.path.join(path_backup_index, meta_file))
+
+
+@then(r'the backup named "{backup_name}" is incomplete')
+def _the_backup_named_is_incomplete(context, backup_name):
+    backups = medusa.listing.list_backups(config=context.medusa_config, show_all=True)
+    for backup in backups:
+        if backup.name == backup_name:
+            assert not backup.finished
 
 
 @when(r'I delete the backup named "{backup_name}"')

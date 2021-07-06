@@ -797,3 +797,21 @@ Feature: Integration tests
         Examples: Local storage
         | storage                    | client encryption |
         | local_backup_gc_grace      |  with_client_encryption |
+
+    @20
+    Scenario Outline: Create an incomplete backup, verify it and delete it
+        Given I have a fresh ccm cluster "<client encryption>" running named "scenario20"
+        Given I am using "<storage>" as storage provider in ccm cluster "<client encryption>"
+        When I create the "test" table in keyspace "medusa"
+        When I load 100 rows in the "medusa.test" table
+        When I perform a backup in "full" mode of the node named "first_backup" with md5 checks "disabled"
+        And I delete the manifest from the backup named "first_backup"
+        Then I can see the backup named "first_backup" when I list the backups
+        And the backup named "first_backup" is incomplete
+        When I delete the backup named "first_backup"
+        Then I cannot see the backup named "first_backup" when I list the backups
+
+        @local
+        Examples: Local storage
+        | storage           | client encryption |
+        | local      |  with_client_encryption |

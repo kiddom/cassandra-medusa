@@ -200,7 +200,7 @@ class Storage(object):
                 _, _, backup_name, tokenmap_file = backup_index_entry.split('/')
             else:
                 # prefix is being used for multi tenancy in the cluster
-                _, _, _, backup_name, tokenmap_file = backup_index_entry.split('/')
+                backup_name, tokenmap_file = backup_index_entry.split('/')[-2:]
 
             # tokenmap file is in format 'tokenmap_fqdn.json'
             tokenmap_fqdn = self.get_fqdn_from_any_index_blob(tokenmap_file)

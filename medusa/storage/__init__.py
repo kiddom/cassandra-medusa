@@ -199,7 +199,8 @@ class Storage(object):
                 # no prefix in the buckets
                 _, _, backup_name, tokenmap_file = backup_index_entry.split('/')
             else:
-                # prefix is being used for multi tenancy in the cluster
+                # prefix is being used for multi tenancy in the cluster. The user-given prefix is arbitrary, we only
+                # care about last two tokens in the full path, delineated by /
                 backup_name, tokenmap_file = backup_index_entry.split('/')[-2:]
 
             # tokenmap file is in format 'tokenmap_fqdn.json'

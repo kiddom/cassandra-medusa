@@ -35,7 +35,7 @@ There is a problem with setuptools. The required package has lower apt priority.
 sudo aptitude install -y python3-setuptools=20.7.0-1
 ```
 
-**Alternatve:** we had good result with just running this instead of the previous command.
+**Alternative:** we had good result with just running this instead of the previous command.
 
 ```
 sudo pip3 install setuptools --upgrade
@@ -44,6 +44,23 @@ sudo pip3 install setuptools --upgrade
 ### Other OSes
 
 Install Python 3.6+, pip3 and virtualenv through your favorite method.
+
+#### MacOS
+
+The closest thing to `apt-get` on OSX is  [`brew`](https://brew.sh/).
+Not all packages have the same name, so the OSX equivalent string becomes:
+
+```shell
+❯ brew install cmake libssh
+```
+
+**Note**: other packages may be required, depending on what you already have on your system. 
+While getting setup, `cmake` and `libssh` were the only two packages that I needed to install.
+
+The `ssh2-python` package requires `cmake` to build. 
+
+Shortly into a `pytest` run, a catastrophic error to the effect of `Library not loaded: @rpath/libssh.4.dylib` which went away once `libssh` was installed
+
 
 ## Create a virtualenv for Medusa
 

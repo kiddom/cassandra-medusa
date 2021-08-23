@@ -102,13 +102,21 @@ Along with the SSTables, Medusa will store three meta files for each backup:
 
 ## Full And Differential Backups
 
-All Medusa backups only copy new SSTables from the nodes, reducing the network traffic needed. It then has two ways of managing the files in the backup catalog that we call Full or Differential backups. For Differential backups only references to SSTables are kept by each new backup, so that only a single instance of each SStable exists no matter how many backups it is in. Differential backups are the default and in operations at Spotify reduced the backup size for some clusters by up to 80%.
+All Medusa backups only copy new SSTables from the nodes, reducing the network traffic needed. 
+It then has two ways of managing the files in the backup catalog that we call Full or Differential backups. 
+For Differential backups only references to SSTables are kept by each new backup, so that only a single instance of each SStable exists no matter how many backups it is in. 
+Differential backups are the default and in operations at Spotify reduced the backup size for some clusters by up to 80%.
 
-Full backups create a complete copy of all SSTables on the node each time they run. Files that have not changed since the last backup will be copied in the backup catalog into the new backup (and not copied off the node). In contrast to the differential method which only creates a reference to files. Full backups are useful when you need to take a complete copy and have all the files in a single location.
+Full backups create a complete copy of all SSTables on the node each time they run. 
+Files that have not changed since the last backup will be copied in the backup catalog into the new backup (and not copied off the node). 
+In contrast to the differential method which only creates a reference to files. 
+Full backups are useful when you need to take a complete copy and have all the files in a single location.
 
 ![Full backups with Medusa for Apache Cassandra](images/medusa_current_full_backups.png)
 
-Differential backups take advantage of the immutable SSTables created by the Log Structured Merge Tree storage engine used by Cassanda. In this mode Medusa checks if the SSTable has previously being backed up, and only copies the new files (just like always). However all SSTables for the node are then stored in a single common folder, and the backup manifest contains only metadata files and references to the SSTables.
+Differential backups take advantage of the immutable SSTables created by the Log Structured Merge Tree storage engine used by Cassanda. 
+In this mode Medusa checks if the SSTable has previously being backed up, and only copies the new files (just like always). 
+However all SSTables for the node are then stored in a single common folder, and the backup manifest contains only metadata files and references to the SSTables.
 
 ![Differential backups with Medusa for Apache Cassandra](images/medusa_incremental_backup.png)
 
